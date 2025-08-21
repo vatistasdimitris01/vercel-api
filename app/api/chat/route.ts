@@ -37,19 +37,21 @@ export async function POST(req: NextRequest) {
       systemInstruction: QBIT_SYSTEM_PROMPT,
     });
 
-    // User sees "websearch" option, internally mapped to Google
+    // Map user-facing "websearch" to internal Google grounding
     const grounding = useWebsearch ? "google-search" : undefined;
 
     const content = {
       role: "user",
       parts: [
         {
+          type: "text",  // required
           text: input,
-          grounding, // undefined if user didn't choose websearch
+          grounding,     // optional: google-search if user chose websearch
         },
       ],
     };
 
+    // Generate content
     const result = await model.generateContent({
       contents: [content],
     });
