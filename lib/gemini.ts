@@ -1,9 +1,11 @@
-import { TextGenerationClient } from '@google/generative-ai';
+import * as googleAI from '@google/generative-ai';
 
-const client = new TextGenerationClient({ apiKey: process.env.GEMINI_API_KEY });
+const client = new googleAI.TextGenerationServiceClient({
+  apiKey: process.env.GEMINI_API_KEY
+});
 
 export async function askQBIT(prompt: string, groundingUrls: string[] = [], imageBase64?: string) {
-  const tools = [];
+  const tools: any[] = [];
 
   // Google grounding via URLs
   if (groundingUrls.length > 0) {
