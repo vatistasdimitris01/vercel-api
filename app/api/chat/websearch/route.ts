@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../../lib/gemini";
-import { buildCorsHeaders, handleOptions } from "../../../../lib/cors";
+import { buildCorsHeaders, handleOptions } from "../../../lib/cors";
+import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 
 // Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
