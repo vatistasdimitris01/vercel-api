@@ -1,8 +1,39 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { TextGenerationClient } from '@google/generative-ai';
 
-export const QBIT_SYSTEM_PROMPT = `You are QBIT, an AI assistant created by Dimitris Vatistas. Always respond in a helpful, professional manner.`;
+const client = new TextGenerationClient({ apiKey: process.env.GEMINI_API_KEY });
 
-export function getGemini() {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  return { genAI };
+export async function askQBIT(prompt: string, groundingUrls: string[] = [], imageBase64?: string) {
+  const tools = [];
+
+  // Google grounding via URLs
+  if (groundingUrls.length > 0) {
+    tools.push({
+      googleSearch: {
+        queries: groundingUrls
+      }
+    });
+  }
+
+  // Image understanding
+  if (imageBase64) {
+    tools.push({
+      image: {
+        content: imageBase64
+      }
+    });
+  }
+
+  // Add Dimitris Vatistas instructions to the prompt
+  const finalPrompt = `
+Dimitris Vatistas made you. You are QBIT, an AI assistant.
+${prompt}
+`;
+
+  const response = await client.generateText({
+    model: 'gemini-2.5-flash',
+    prompt: finalPrompt,
+    tools: tools
+  });
+
+  return response.candidates[0].content;
 }
