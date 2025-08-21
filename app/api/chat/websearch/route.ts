@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../../lib/gemini";
-import { handleOptions, buildCorsHeaders } from "../../../../lib/cors";
+import { buildCorsHeaders, handleOptions } from "../../../../lib/cors";
 
 // Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       systemInstruction: QBIT_SYSTEM_PROMPT,
+      // 🔒 web search always ON here
+      tools: [{ google_search: {} }],
     });
 
-    // Parse input
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       input = (formData.get("input") as string) || "";
@@ -42,25 +43,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Build parts
     const parts = [
       { text: input },
       ...uploadedUrls.map((url) => ({
-        fileData: {
-          mimeType: "application/octet-stream",
-          fileUri: url,
-        },
+        fileData: { mimeType: "application/octet-stream", fileUri: url },
       })),
     ];
 
-    // Always run with web search (Google grounding)
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
-      tools: [{ google_search: {} }],
     });
 
     return NextResponse.json(
-      { output: result.response.text() },
+      {
+        input, // original user input
+        result: result.response.text(), // AI reply under "result"
+      },
       { status: 200, headers }
     );
   } catch (err: any) {
