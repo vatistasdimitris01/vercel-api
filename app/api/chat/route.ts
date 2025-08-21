@@ -1,77 +1,48 @@
-// app/api/chat/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
-import { buildCorsHeaders, handleOptions } from "../../../lib/cors";
 
+// Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
-  return handleOptions(req);
+  return NextResponse.json({}, { status: 200, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS", "Access-Control-Allow-Headers": "*" } });
 }
 
 export async function POST(req: NextRequest) {
-  const headers = buildCorsHeaders(req);
+  const headers = { "Access-Control-Allow-Origin": "*" };
 
   try {
     const contentType = req.headers.get("content-type") || "";
     let input = "";
-    let uploadedFiles: string[] = [];
+    let uploadedUrls: string[] = [];
 
-    const { genAI, fileManager } = getGemini();
+    const { genAI } = getGemini();
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       systemInstruction: QBIT_SYSTEM_PROMPT,
     });
 
     if (contentType.includes("multipart/form-data")) {
-      // Handle form-data with file(s)
       const formData = await req.formData();
       input = (formData.get("input") as string) || "";
-
       const files = formData.getAll("files");
-      for (const file of files) {
-        if (file instanceof File) {
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const upload = await fileManager.uploadFile(buffer, {
-            mimeType: file.type,
-            displayName: file.name,
-          });
-          uploadedFiles.push(upload.file.uri);
-        }
-      }
+      uploadedUrls = files.map((f) => f instanceof File ? f.name : "").filter(Boolean);
     } else {
-      // Handle JSON
       const body = await req.json();
       input = body.input || "";
-      uploadedFiles = (body.urls as string[]) || [];
+      uploadedUrls = (body.urls as string[]) || [];
     }
 
-    if (!input && uploadedFiles.length === 0) {
-      return NextResponse.json(
-        { error: "Missing input text or files" },
-        { status: 400, headers }
-      );
+    if (!input && uploadedUrls.length === 0) {
+      return NextResponse.json({ error: "Missing input or files" }, { status: 400, headers });
     }
 
-    // Build user parts
-    const parts = [{ text: input }];
-    for (const url of uploadedFiles) {
-      parts.push({
-        fileData: { mimeType: "application/octet-stream", fileUri: url },
-      });
-    }
+    const parts = [{ text: input }, ...uploadedUrls.map((url) => ({ fileData: { mimeType: "application/octet-stream", fileUri: url } }))];
 
-    // Generate response
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
     });
 
-    return NextResponse.json(
-      { output: result.response.text() },
-      { status: 200, headers }
-    );
+    return NextResponse.json({ output: result.response.text() }, { status: 200, headers });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500, headers }
-    );
+    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500, headers });
   }
 }
