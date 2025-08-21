@@ -1,6 +1,5 @@
 // lib/gemini.ts
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
+import { GoogleGenerativeAI, GoogleAIFileManager } from "@google/generative-ai";
 
 export function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
