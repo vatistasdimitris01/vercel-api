@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 
-// Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
   return NextResponse.json({}, {
     status: 200,
@@ -21,13 +20,12 @@ export async function POST(req: NextRequest) {
     let input = "";
     let uploadedUrls: string[] = [];
 
-    const { genAI } = getGemini();
+    const { genAI, googleSearch } = getGemini();
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       systemInstruction: QBIT_SYSTEM_PROMPT,
     });
 
-    // Parse input
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       input = (formData.get("input") as string) || "";
@@ -48,13 +46,10 @@ export async function POST(req: NextRequest) {
       ...uploadedUrls.map((url) => ({ fileData: { mimeType: "application/octet-stream", fileUri: url } }))
     ];
 
-    // Google grounding tool
-    const groundingTool = { googleSearch: {} };
-
-    // Generate content with grounding
+    // ✅ Pass the proper SearchTool instance
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
-      tools: [groundingTool], // ✅ correct way to pass grounding
+      tools: [googleSearch],
     });
 
     return NextResponse.json({ output: result.response.text() }, { status: 200, headers });
