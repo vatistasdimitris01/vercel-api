@@ -1,30 +1,31 @@
 import { NextResponse } from "next/server";
-import { QbitModel } from "qbitai"; // adjust import to your actual model
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
   try {
     const { input } = await req.json();
 
-    // Web search is always enabled (internal grounding is Google)
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+    // Always apply web search (internally uses Google grounding)
     const content = {
       role: "user",
-      text: input,
-      grounding: "google-search" // internal use only
+      parts: [{ text: input }],
+      grounding: "google-search"
     };
 
-    const model = new QbitModel();
-
-    // Generate content
     const result = await model.generateContent({
       contents: [content]
     });
 
     return NextResponse.json({
-      result: result.outputText // adjust to your model's actual output
+      result: result.response.text()
     });
-  } catch (error) {
-    return NextResponse.json({
-      error: error.message || "Something went wrong"
-    }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
