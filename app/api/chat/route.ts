@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 
-// Handle CORS preflight
+// CORS preflight
 export async function OPTIONS(req: NextRequest) {
-  return NextResponse.json(
-    {},
-    {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-      },
-    }
-  );
+  return NextResponse.json({}, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -21,14 +18,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const input = body.input || "";
-    const useWebsearch = body.options?.websearch || false;
+    const input = body.input?.trim();
 
     if (!input) {
-      return NextResponse.json(
-        { error: "Missing input" },
-        { status: 400, headers }
-      );
+      return NextResponse.json({ error: "Missing input text" }, { status: 400, headers });
     }
 
     const { genAI } = getGemini();
@@ -37,33 +30,18 @@ export async function POST(req: NextRequest) {
       systemInstruction: QBIT_SYSTEM_PROMPT,
     });
 
-    // Map user-facing "websearch" to internal Google grounding
-    const grounding = useWebsearch ? "google-search" : undefined;
-
-    const content = {
-      role: "user",
-      parts: [
+    const result = await model.generateContent({
+      contents: [
         {
-          type: "text",  // required
-          text: input,
-          grounding,     // optional: google-search if user chose websearch
+          role: "user",
+          parts: [{ text: input }],
         },
       ],
-    };
-
-    // Generate content
-    const result = await model.generateContent({
-      contents: [content],
     });
 
-    return NextResponse.json(
-      { output: result.response.text() },
-      { status: 200, headers }
-    );
+    return NextResponse.json({ output: result.response.text() }, { status: 200, headers });
+
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500, headers }
-    );
+    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500, headers });
   }
 }
