@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -14,15 +13,19 @@ export default function Home() {
       body: JSON.stringify({ text: prompt }),
     });
     const data = await res.json();
-    setResponse(data.output);
+    setResponse(data.output || "No response");
   };
 
   return (
     <div style={{ background: "black", color: "white", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
       <h1>QBIT AI</h1>
-      <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={5} cols={40} />
-      <button onClick={handleSubmit}>Send</button>
-      <pre>{response}</pre>
+      <textarea
+        style={{ width: "400px", height: "100px", marginBottom: "10px" }}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+      <button onClick={handleSubmit} style={{ padding: "10px 20px" }}>Send</button>
+      <pre style={{ marginTop: "20px", width: "400px" }}>{response}</pre>
     </div>
   );
 }
