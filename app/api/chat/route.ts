@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 
-// Handle CORS preflight
+// CORS preflight
 export async function OPTIONS(req: NextRequest) {
   return NextResponse.json({}, {
     status: 200,
-    headers: { 
+    headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
-    }
+    },
   });
 }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       contents: [{
         role: "user",
         text: input,
-        grounding: "google-search", // enables Google grounding
+        grounding: "google-search",
       }],
     });
 
