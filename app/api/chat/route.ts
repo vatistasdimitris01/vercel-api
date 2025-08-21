@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 
-// Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
   return NextResponse.json(
     {},
@@ -21,9 +20,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const input = body.input || "";
-    const useWebsearch = body.options?.websearch ?? true; // default true
-    const useThinking = body.options?.thinking ?? true; // default true
+    let input = body.input || "";
+    const useWebsearch = body.options?.websearch ?? true;
+    const useThinking = body.options?.thinking ?? true;
 
     if (!input) {
       return NextResponse.json(
@@ -32,35 +31,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (useThinking) {
+      // Prepend thinking instruction for chain-of-thought
+      input = "Think step by step: " + input;
+    }
+
     const { genAI } = getGemini();
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       systemInstruction: QBIT_SYSTEM_PROMPT,
     });
 
-    // Map user-facing "websearch" to internal Google grounding
-    const grounding = useWebsearch ? "google-search" : undefined;
-
     const content = {
       role: "user",
       parts: [
         {
           text: input,
-          grounding,
+          grounding: useWebsearch ? "google-search" : undefined,
         },
       ],
     };
 
-    // Include reasoning if thinking is enabled
     const result = await model.generateContent({
       contents: [content],
-      reasoning: useThinking ? { strategy: "chain-of-thought" } : undefined,
     });
 
     return NextResponse.json(
       {
         output: result.response.text(),
-        usedWebsearch: !!grounding,
+        usedWebsearch: useWebsearch,
         usedThinking: useThinking,
       },
       { status: 200, headers }
