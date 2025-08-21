@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../../lib/gemini";
+import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 import { buildCorsHeaders, handleOptions } from "../../../lib/cors";
 
 // Handle CORS preflight
@@ -13,58 +13,36 @@ export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     let input = "";
-    let uploadedUrls: string[] = [];
 
     const { genAI } = getGemini();
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       systemInstruction: QBIT_SYSTEM_PROMPT,
-      // 🔒 web search always ON here
-      tools: [{ google_search: {} }],
     });
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       input = (formData.get("input") as string) || "";
-      const files = formData.getAll("files");
-      uploadedUrls = files
-        .map((f) => (f instanceof File ? f.name : ""))
-        .filter(Boolean);
     } else {
       const body = await req.json();
       input = body.input || "";
-      uploadedUrls = (body.urls as string[]) || [];
     }
 
-    if (!input && uploadedUrls.length === 0) {
-      return NextResponse.json(
-        { error: "Missing input or files" },
-        { status: 400, headers }
-      );
+    if (!input) {
+      return NextResponse.json({ error: "Missing input" }, { status: 400, headers });
     }
 
-    const parts = [
-      { text: input },
-      ...uploadedUrls.map((url) => ({
-        fileData: { mimeType: "application/octet-stream", fileUri: url },
-      })),
-    ];
+    // Prepare content parts
+    const parts = [{ text: input }];
 
+    // Call the model
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
     });
 
-    return NextResponse.json(
-      {
-        input, // original user input
-        result: result.response.text(), // AI reply under "result"
-      },
-      { status: 200, headers }
-    );
+    // Return the generated text
+    return NextResponse.json({ result: result.response?.text() || "" }, { status: 200, headers });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500, headers }
-    );
+    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500, headers });
   }
 }
