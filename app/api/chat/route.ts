@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const input = body.input || "";
-    const useThinking = body.options?.thinking || false;
     const useWebsearch = body.options?.websearch || false;
 
     if (!input) {
@@ -46,15 +45,14 @@ export async function POST(req: NextRequest) {
       parts: [
         {
           text: input,
-          grounding, // this will be undefined if user didn't choose websearch
+          grounding, // undefined if user didn't choose websearch
         },
       ],
     };
 
-    // Thinking option: can be extended for advanced behavior
+    // Generate content
     const result = await model.generateContent({
       contents: [content],
-      reasoning: useThinking ? { strategy: "chain-of-thought" } : undefined,
     });
 
     return NextResponse.json(
