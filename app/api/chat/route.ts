@@ -3,11 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGemini, QBIT_SYSTEM_PROMPT } from "../../../lib/gemini";
 import { buildCorsHeaders, handleOptions } from "../../../lib/cors";
 
-// Allow multipart file parsing
-export const config = {
-  api: { bodyParser: false },
-};
-
 export async function OPTIONS(req: NextRequest) {
   return handleOptions(req);
 }
@@ -16,7 +11,6 @@ export async function POST(req: NextRequest) {
   const headers = buildCorsHeaders(req);
 
   try {
-    // Check if request is multipart (file upload) or JSON (text only)
     const contentType = req.headers.get("content-type") || "";
     let input = "";
     let uploadedFiles: string[] = [];
@@ -30,7 +24,6 @@ export async function POST(req: NextRequest) {
     if (contentType.includes("multipart/form-data")) {
       // Handle form-data with file(s)
       const formData = await req.formData();
-
       input = (formData.get("input") as string) || "";
 
       const files = formData.getAll("files");
@@ -58,10 +51,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Build user parts (input text + any uploaded file URLs)
+    // Build user parts
     const parts = [{ text: input }];
     for (const url of uploadedFiles) {
-      parts.push({ fileData: { mimeType: "application/octet-stream", fileUri: url } });
+      parts.push({
+        fileData: { mimeType: "application/octet-stream", fileUri: url },
+      });
     }
 
     // Generate response
