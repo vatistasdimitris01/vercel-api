@@ -31,11 +31,12 @@ export async function POST(req: NextRequest) {
     });
 
     const result = await model.generateContent({
-      contents: [{
-        role: "user",
-        text: input,
-        grounding: "google-search",
-      }],
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: input }],
+        },
+      ],
     });
 
     return NextResponse.json({ output: result.response.text() }, { status: 200, headers });
